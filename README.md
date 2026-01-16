@@ -91,6 +91,7 @@ curl -s "http://localhost:3000/v1/audit?request_id=$REQ" -H "x-api-key: dev-api-
 - Add tracing (OpenTelemetry), dashboards/alerts on DLQ growth, latency SLOs.
 - Harden validation (JSON schema), richer citation offsets, and model confidence scores.
 - Blue/green deploys, migration gating, chaos testing for partial failures.
+- LLM/RAG path: `EXTRACTION_MODE=hybrid` uses a placeholder LLM step with fallback to heuristics; to make it real, wire an LLM client with strict JSON schema validation, citations, confidence thresholds, timeouts, and rate limits, keeping the heuristic fallback.
 
 ## Trade-offs / cuts
 - Extraction uses heuristics (regex/keyword) instead of LLM; offsets are line-level.
