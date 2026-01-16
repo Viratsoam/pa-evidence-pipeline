@@ -1,0 +1,159 @@
+{
+  "info": {
+    "name": "PA Evidence Pipeline",
+    "_postman_id": "c4c19b90-d8ed-4a0a-8d91-3d6b8f0aa001",
+    "description": "Postman collection for PA intake + document upload, status, and audit.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create PA Request",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// capture request_id for subsequent calls",
+              "var data = pm.response.json();",
+              "pm.collectionVariables.set('request_id', data.request_id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "dev-api-key",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/v1/pa-requests",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "pa-requests"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Upload Document",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// capture job_id if needed",
+              "var data = pm.response.json();",
+              "pm.collectionVariables.set('job_id', data.job_id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "dev-api-key",
+            "type": "text"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "demo-key-1",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"Patient: John Doe\\nDx: Knee pain, suspected osteoarthritis.\\nImaging: X-ray shows joint space narrowing and osteophytes.\\nTherapy: Trial of NSAIDs for 3 weeks. No documented physical therapy.\\nFunction: Difficulty climbing stairs; cannot walk > 1 block; ADLs impacted.\\nPlan: Requesting total knee arthroplasty.\" \n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/v1/pa-requests/{{request_id}}/documents",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "pa-requests", "{{request_id}}", "documents"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get PA Request",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "dev-api-key",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3000/v1/pa-requests/{{request_id}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "pa-requests", "{{request_id}}"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Audit",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "dev-api-key",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3000/v1/audit?request_id={{request_id}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "audit"],
+          "query": [
+            {
+              "key": "request_id",
+              "value": "{{request_id}}"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "request_id",
+      "value": ""
+    },
+    {
+      "key": "job_id",
+      "value": ""
+    }
+  ]
+}

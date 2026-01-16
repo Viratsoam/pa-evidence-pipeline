@@ -1,0 +1,10 @@
+node_modules
+dist
+.venv
+__pycache__
+*.pyc
+api/node_modules
+api/dist
+npm-debug.log
+PROJECT_SUMMARY.md
+Basys Backend Engineer Assignment.docx

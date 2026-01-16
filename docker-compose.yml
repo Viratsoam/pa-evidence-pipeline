@@ -1,0 +1,66 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: appsecret
+      POSTGRES_DB: appdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d appdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./api
+    command: ["npm", "run", "start"]
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgres://appuser:appsecret@db:5432/appdb
+      REDIS_URL: redis://redis:6379
+      API_KEY: dev-api-key
+      QUEUE_NAME: document_uploaded
+      DLQ_NAME: document_uploaded_dlq
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: ./worker
+    command: ["bash", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgres://appuser:appsecret@db:5432/appdb
+      REDIS_URL: redis://redis:6379
+      QUEUE_NAME: document_uploaded
+      DLQ_NAME: document_uploaded_dlq
+      MAX_CONCURRENCY: "5"
+      MAX_RATE_PER_SEC: "5"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  db_data:
