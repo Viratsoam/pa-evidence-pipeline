@@ -8,12 +8,76 @@ Backend take-home implementing PA intake, async evidence extraction, policy eval
 - PostgreSQL with schemas: `core` (metadata, audit, decisions) and `phi` (documents, evidence details).
 - Redis queues: `document_uploaded` main queue; `document_uploaded_dlq` dead-letter queue.
 
-```
-[Client] --(REST)--> [API] --(event)--> [Redis queue] --> [Worker]
-     |                                        |
-     |-------------------(status/audit)-------|
-                               |
-                              [PostgreSQL: core + phi]
+```mermaid
+flowchart TB
+    subgraph Client[" "]
+        C[Client/Postman]
+    end
+    
+    subgraph API["API Service (NestJS :3000)"]
+        A1[POST /v1/pa-requests<br/>Create PA Request]
+        A2[POST /v1/pa-requests/{id}/documents<br/>Upload Document<br/>Idempotency-Key]
+        A3[GET /v1/pa-requests/{id}<br/>Get Status + Evidence Pack]
+        A4[GET /v1/audit<br/>Get Audit Events]
+    end
+    
+    subgraph Queue["Redis Queue"]
+        Q[document_uploaded<br/>Main Queue]
+        DLQ[document_uploaded_dlq<br/>Dead Letter Queue]
+    end
+    
+    subgraph Worker["Worker Service (FastAPI :8000)"]
+        W1[Consume Event<br/>brpop with timeout]
+        W2[Stage A: OCR Mock<br/>Retryable errors]
+        W3[Stage B: Evidence Extraction<br/>Heuristic/LLM-hybrid<br/>Guardrails + Citations]
+        W4[Stage C: Policy Evaluation<br/>TKA PT-required]
+        W5[Stage D: Evidence Pack<br/>Persist + Audit Event]
+    end
+    
+    subgraph DB["PostgreSQL"]
+        CORE[(core schema<br/>pa_requests<br/>document_jobs<br/>evidence_packs<br/>audit_events)]
+        PHI[(phi schema<br/>documents<br/>evidence_details)]
+    end
+    
+    subgraph Observability[" "]
+        M[/metrics<br/>Prometheus]
+        L[Structured Logs<br/>JSON, no PHI]
+    end
+    
+    C -->|REST| A1
+    C -->|REST| A2
+    C -->|REST| A3
+    C -->|REST| A4
+    
+    A1 -->|INSERT| CORE
+    A2 -->|INSERT| PHI
+    A2 -->|LPUSH| Q
+    A3 -->|SELECT| CORE
+    A3 -->|SELECT| PHI
+    A4 -->|SELECT| CORE
+    
+    Q -->|brpop| W1
+    W1 --> W2
+    W2 -->|retry on error| W2
+    W2 --> W3
+    W3 -->|fallback if LLM fails| W3
+    W3 --> W4
+    W4 --> W5
+    W5 -->|INSERT| CORE
+    W5 -->|INSERT| PHI
+    
+    W1 -.->|max retries| DLQ
+    
+    Worker -->|/metrics| M
+    API -->|JSON logs| L
+    Worker -->|JSON logs| L
+    
+    style C fill:#e1f5ff
+    style API fill:#fff4e1
+    style Queue fill:#ffe1f5
+    style Worker fill:#e1ffe1
+    style DB fill:#f5e1ff
+    style Observability fill:#ffe1e1
 ```
 
 ## Running locally
