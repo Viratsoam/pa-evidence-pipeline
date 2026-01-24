@@ -15,33 +15,33 @@ flowchart TB
     end
     
     subgraph API["API Service (NestJS :3000)"]
-        A1[POST /v1/pa-requests<br/>Create PA Request]
-        A2[POST /v1/pa-requests/{id}/documents<br/>Upload Document<br/>Idempotency-Key]
-        A3[GET /v1/pa-requests/{id}<br/>Get Status + Evidence Pack]
-        A4[GET /v1/audit<br/>Get Audit Events]
+        A1[POST /v1/pa-requests]
+        A2[POST /v1/pa-requests/id/documents]
+        A3[GET /v1/pa-requests/id]
+        A4[GET /v1/audit]
     end
     
     subgraph Queue["Redis Queue"]
-        Q[document_uploaded<br/>Main Queue]
-        DLQ[document_uploaded_dlq<br/>Dead Letter Queue]
+        Q[document_uploaded Main Queue]
+        DLQ[document_uploaded_dlq DLQ]
     end
     
     subgraph Worker["Worker Service (FastAPI :8000)"]
-        W1[Consume Event<br/>brpop with timeout]
-        W2[Stage A: OCR Mock<br/>Retryable errors]
-        W3[Stage B: Evidence Extraction<br/>Heuristic/LLM-hybrid<br/>Guardrails + Citations]
-        W4[Stage C: Policy Evaluation<br/>TKA PT-required]
-        W5[Stage D: Evidence Pack<br/>Persist + Audit Event]
+        W1[Consume Event]
+        W2[Stage A: OCR Mock]
+        W3[Stage B: Evidence Extraction]
+        W4[Stage C: Policy Evaluation]
+        W5[Stage D: Evidence Pack]
     end
     
     subgraph DB["PostgreSQL"]
-        CORE[(core schema<br/>pa_requests<br/>document_jobs<br/>evidence_packs<br/>audit_events)]
-        PHI[(phi schema<br/>documents<br/>evidence_details)]
+        CORE[("core: pa_requests, document_jobs, evidence_packs, audit_events")]
+        PHI[("phi: documents, evidence_details")]
     end
     
     subgraph Observability[" "]
-        M[/metrics<br/>Prometheus]
-        L[Structured Logs<br/>JSON, no PHI]
+        M[/metrics Prometheus]
+        L[Structured Logs JSON no PHI]
     end
     
     C -->|REST| A1
@@ -68,9 +68,9 @@ flowchart TB
     
     W1 -.->|max retries| DLQ
     
-    Worker -->|/metrics| M
-    API -->|JSON logs| L
-    Worker -->|JSON logs| L
+    W5 -->|/metrics| M
+    A2 -->|JSON logs| L
+    W5 -->|JSON logs| L
     
     style C fill:#e1f5ff
     style API fill:#fff4e1
