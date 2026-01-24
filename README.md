@@ -40,7 +40,7 @@ flowchart TB
     end
     
     subgraph Observability[" "]
-        M[/metrics Prometheus]
+        M[metrics Prometheus]
         L[Structured Logs JSON no PHI]
     end
     
